@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background for the page */
+        }
+        .sidebar {
+            background-color: #4A00E0; /* Deep purple */
+        }
+        .sidebar-item {
+            transition: background-color 0.3s ease;
+        }
+        .sidebar-item:hover, .sidebar-item.active {
+            background-color: #6A11CB; /* Lighter purple for hover/active */
+        }
+        .content-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .welcome-banner {
+            background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%); /* Purple gradient */
+        }
+        .btn-primary {
+            background-color: #6A11CB;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #4A00E0;
+        }
+        .file-input-label {
+            border: 2px dashed #cbd5e1;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+        .file-input-label:hover {
+            border-color: #6A11CB;
+            background-color: #f7fafc;
+        }
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c5c5c5;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a5a5a5;
+        }
+        
+        /* Degree Status Tracker Styles */
+        .status-tracker-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative; /* For tooltip positioning */
+            flex: 1;
+            padding: 10px; /* Add some padding for hover effects */
+            transition: transform 0.2s ease-out;
+        }
+        .status-tracker-step:hover {
+            transform: translateY(-3px);
+        }
+        .status-tracker-icon-wrapper {
+            position: relative;
+            margin-bottom: 0.75rem;
+        }
+        .status-tracker-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid;
+            transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .status-tracker-icon i { width: 24px; height: 24px; }
+
+        .status-tracker-line {
+            height: 4px;
+            background-color: #e0e7ff; /* Lighter Indigo for pending line */
+            flex-grow: 1;
+            margin: 0 0.5rem;
+            border-radius: 2px;
+            transition: background-color 0.4s ease;
+        }
+
+        /* Step States */
+        /* Pending */
+        .status-tracker-step .status-tracker-icon {
+            background-color: #f3f4f6; /* Lighter Gray */
+            border-color: #d1d5db; /* Gray border */
+            color: #6b7280; /* Gray icon/text */
+        }
+        .status-tracker-step .status-text { color: #4b5563; font-weight: 500; }
+        .status-tracker-step p.text-xs { color: #6b7280; }
+
+        /* Current */
+        .status-tracker-step.current .status-tracker-icon {
+            background-color: #8B5CF6; /* Vibrant Purple */
+            border-color: #7C3AED; /* Darker Purple border */
+            color: white;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+        }
+        .status-tracker-step.current .status-text { color: #5B21B6; font-weight: 600; }
+        .status-tracker-step.current + .status-tracker-line,
+        .status-tracker-line.current-connect { /* For line leading to current */
+            background-color: #8B5CF6;
+        }
+
+
+        /* Completed */
+        .status-tracker-step.completed .status-tracker-icon {
+            background-color: #10B981; /* Emerald Green */
+            border-color: #059669; /* Darker Green border */
+            color: white;
+        }
+        .status-tracker-step.completed .status-text { color: #047857; font-weight: 600; }
+        .status-tracker-step.completed + .status-tracker-line,
+        .status-tracker-line.completed-connect { /* For line leading to completed */
+             background-color: #10B981;
+        }
+
+
+        /* Tooltip for step details */
+        .step-tooltip {
+            visibility: hidden;
+            opacity: 0;
+            background-color: #374151; /* Dark gray */
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px 12px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%; /* Position above the icon */
+            left: 50%;
+            transform: translateX(-50%);
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .step-tooltip::after { /* Arrow */
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #374151 transparent transparent transparent;
+        }
+        .status-tracker-step:hover .step-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        #applicationSubmittedMessage {
+            background-color: #ECFDF5; /* Light green */
+            color: #065F46; /* Dark green text */
+            border-left: 4px solid #10B981; /* Green border */
+        }
+        .sticky-upload-counter {
+    position: sticky;
+    bottom: 0; /* Sticks to bottom of viewport until submit button */
+    background-color: #f3f4f6; /* gray-100 */
+    color: #1f2937; /* gray-800 */
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem; /* text-sm */
+    border-radius: 0.375rem; /* rounded-md */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    z-index: 10;
+  }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <aside class="sidebar w-64 min-h-screen p-6 flex flex-col justify-between">
+        <div>
+            <div class="flex items-center space-x-3 mb-10">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-graduation-cap"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12v5c0 3 3 5 9 5s9-2 9-5v-5"/></svg>
+                <h1 class="text-2xl font-bold text-white">Student Portal</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li class="mb-3">
+                        <a href="#" id="nav-dashboard" class="sidebar-item active flex items-center space-x-3 text-purple-100 hover:text-white p-3 rounded-lg">
+                            <i data-lucide="layout-dashboard"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="mb-3">
+                        <a href="#" id="nav-apply-degree" class="sidebar-item flex items-center space-x-3 text-purple-100 hover:text-white p-3 rounded-lg">
+                           <i data-lucide="file-text"></i>
+                            <span>Apply for Degree</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div>
+            <a href="#" class="sidebar-item flex items-center space-x-3 text-purple-100 hover:text-white p-3 rounded-lg logout-b">
+                <i data-lucide="log-out"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-6 lg:p-8 overflow-y-auto">
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-8">
+            <div class="relative w-full sm:w-auto mb-4 sm:mb-0">
+                <input type="text" placeholder="Search..." class="pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none w-full sm:w-72 transition-all duration-300">
+                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <p id="header-student-name" class="font-semibold text-gray-800">John Doe</p>
+                    <p id="header-student-id" class="text-sm text-gray-500">Student ID: 2024-0001</p>
+                </div>
+                <img src="https://placehold.co/40x40/E2E8F0/4A5568?text=JD" alt="User Avatar" class="w-10 h-10 rounded-full">
+            </div>
+        </header>  
+
+        <div id="dashboard-view">
+            <div class="welcome-banner p-10 rounded-xl text-white mb-8 shadow-lg relative ">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p id="current-date" class="text-sm opacity-80 mb-1">September 4, 2023</p>
+                        <h2 id="welcome-message" class="text-3xl font-bold mb-1">Welcome back, John!</h2>
+                        <p class="opacity-90">Always stay updated in your student portal.</p>
+                    </div>
+                    <img src="/assets/images/Graduation-bro.svg" alt="Student Illustration" class="w-80 h-40 lg:w-42 lg:h-42 hidden sm:block object-cover absolute top-0 right-40">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 content-card p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-6">Personal Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                        <div>
+                            <p class="text-gray-500">Roll Number</p>
+                            <p id="roll-number" class="font-medium text-gray-700">CS-2024-001</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Student Name</p>
+                            <p id="student-name" class="font-medium text-gray-700">John Doe</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Father's Name</p>
+                            <p id="father-name" class="font-medium text-gray-700">Richard Doe</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Department</p>
+                            <p id="department" class="font-medium text-gray-700">Computer Science</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Program</p>
+                            <p id="program" class="font-medium text-gray-700">BS (Computer Science)</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">CNIC Number</p>
+                            <p id="cnic-number" class="font-medium text-gray-700">12345-6789012-3</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Mobile Number</p>
+                            <p id="mobile-number" class="font-medium text-gray-700">+92 300 1234567</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Institute</p>
+                            <p id="institute" class="font-medium text-gray-700">National University of Technology</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-800">Daily Notice</h3>
+                        <a href="#" class="text-sm text-purple-600 hover:text-purple-800 font-medium">See all</a>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                            <h4 class="font-semibold text-purple-700">Mid-Term Exam Schedule</h4>
+                            <p class="text-sm text-purple-600 mt-1">The schedule for mid-term exams has been announced. Check the notice board.</p>
+                            <a href="#" class="text-xs text-purple-600 hover:underline mt-2 inline-block">See more</a>
+                        </div>
+                        <div class="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                            <h4 class="font-semibold text-orange-700">Fee Payment Reminder</h4>
+                            <p class="text-sm text-orange-600 mt-1">Last date for fee submission is approaching. Pay your dues on time.</p>
+                            <a href="#" class="text-xs text-orange-600 hover:underline mt-2 inline-block">See more</a>
+                        </div>
+                         <div class="p-4 bg-sky-50 rounded-lg border border-sky-200">
+                            <h4 class="font-semibold text-sky-700">Workshop on AI</h4>
+                            <p class="text-sm text-sky-600 mt-1">A workshop on "Future of AI" will be held next week. Register now!</p>
+                            <a href="#" class="text-xs text-sky-600 hover:underline mt-2 inline-block">See more</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="apply-degree-view" class="hidden">
+            <div class="content-card p-6 sm:p-8">
+                <div id="applicationSubmittedMessage" class="p-4 mb-6 rounded-md hidden">
+                    <div class="flex">
+                        <div class="flex-shrink-0"><i data-lucide="check-circle" class="h-5 w-5 text-green-500"></i></div>
+                        <div class="ml-3"><p class="text-sm font-medium">Application Submitted Successfully!</p><p class="text-xs mt-1">Your documents have been received. Track the progress below.</p></div>
+                    </div>
+                </div>
+                <div id="degree-form-container">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Degree Application Process</h2>
+                    <p class="text-gray-600 mb-8">Please upload the required documents to initiate your degree application. Ensure all documents are clear and legible.</p>
+                    <form id="degree-application-form" class="space-y-8 relative" enctype="multipart/form-data">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-1">1. Final Year Transcript</h3>
+                            <p class="text-sm text-gray-500 mb-3">Clearance from Examination Department. Must be attested.</p>
+                            <label class="file-input-label block relative bg-gray-50 rounded-lg p-12 text-center cursor-pointer transition hover:bg-gray-100">
+                                <input type="file" name="final_transcript" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-index="0" />
+                                <i data-lucide="upload-cloud" class="mx-auto mb-2 text-gray-400 w-10 h-10"></i>
+                                <span class="text-sm text-gray-500 file-name-display block">Click to upload or drag & drop</span>
+                                <span class="text-xs text-gray-400 mt-1 block">PDF, JPG, PNG (Max 5MB)</span>
+                                <div class="file-status mt-2 text-sm text-green-600 font-medium hidden"></div>
+                                <button type="button" class="file-delete text-xs text-red-500 underline mt-2 hidden">Remove</button>
+                            </label>
+                        </div>
+    
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-1">2. CNIC Copy</h3>
+                            <p class="text-sm text-gray-500 mb-3">Attested copy of your Computerized National Identity Card.</p>
+                            <label class="file-input-label block relative bg-gray-50 rounded-lg p-12 text-center cursor-pointer transition hover:bg-gray-100">
+                                <input type="file" name="cnic_copy" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-index="1" />
+                                <i data-lucide="upload-cloud" class="mx-auto mb-2 text-gray-400 w-10 h-10"></i>
+                                <span class="text-sm text-gray-500 file-name-display block">Click to upload or drag & drop</span>
+                                <span class="text-xs text-gray-400 mt-1 block">PDF, JPG, PNG (Max 2MB)</span>
+                                <div class="file-status mt-2 text-sm text-green-600 font-medium hidden"></div>
+                                <button type="button" class="file-delete text-xs text-red-500 underline mt-2 hidden">Remove</button>
+                            </label>
+                        </div>
+    
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-1">3. Library Clearance</h3>
+                            <p class="text-sm text-gray-500 mb-3">Certificate confirming no pending books or dues.</p>
+                            <label class="file-input-label block relative bg-gray-50  rounded-lg p-12 text-center cursor-pointer transition hover:bg-gray-100">
+                                <input type="file" name="library_clearance" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-index="2" />
+                                <i data-lucide="upload-cloud" class="mx-auto mb-2 text-gray-400 w-10 h-10"></i>
+                                <span class="text-sm text-gray-500 file-name-display block">Click to upload or drag & drop</span>
+                                <span class="text-xs text-gray-400 mt-1 block">PDF, JPG, PNG (Max 2MB)</span>
+                                <div class="file-status mt-2 text-sm text-green-600 font-medium hidden"></div>
+                                <button type="button" class="file-delete text-xs text-red-500 underline mt-2 hidden">Remove</button>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-1">4. Accounts Clearance (No Dues Certificate)</h3>
+                            <p class="text-sm text-gray-500 mb-3">Confirmation of no outstanding financial dues with the institute.</p>
+                            <label class="file-input-label block relative bg-gray-50  rounded-lg p-12 text-center cursor-pointer transition hover:bg-gray-100">
+                                <input type="file" name="accounts_clearance" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-index="3" />
+                                <i data-lucide="upload-cloud" class="mx-auto mb-2 text-gray-400 w-10 h-10"></i>
+                                <span class="text-sm text-gray-500 file-name-display block">Click to upload or drag & drop</span>
+                                <span class="text-xs text-gray-400 mt-1 block">PDF, JPG, PNG (Max 5MB)</span>
+                                <div class="file-status mt-2 text-sm text-green-600 font-medium hidden"></div>
+                                <button type="button" class="file-delete text-xs text-red-500 underline mt-2 hidden">Remove</button>
+                            </label>
+                        </div>
+    
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-1">5. Original Bank Challan/Receipt of Degree Fee</h3>
+                            <p class="text-sm text-gray-500 mb-3">Scanned copy of the paid degree processing fee.</p>
+                            <label class="file-input-label block relative bg-gray-50  rounded-lg p-12 text-center cursor-pointer transition hover:bg-gray-100">
+                                <input type="file" name="degree_fee_receipt" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-index="4" />
+                                <i data-lucide="upload-cloud" class="mx-auto mb-2 text-gray-400 w-10 h-10"></i>
+                                <span class="text-sm text-gray-500 file-name-display block">Click to upload or drag & drop</span>
+                                <span class="text-xs text-gray-400 mt-1 block">PDF, JPG, PNG (Max 5MB)</span>
+                                <div class="file-status mt-2 text-sm text-green-600 font-medium hidden"></div>
+                                <button type="button" class="file-delete text-xs text-red-500 underline mt-2 hidden">Remove</button>
+                            </label>
+                        </div>
+                        <div class="spacer py-2"></div>
+                        <div class="pt-4 inline mt-6">
+                            <button type="submit" class="btn-primary w-full sm:w-auto">Submit Application</button>
+                        </div>
+                        <div id="sticky-upload-counter" class="sticky-upload-counter inline">
+                            Uploaded: 0/5
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="degree-status-tracker" class="hidden mt-8 pt-8 border-t border-gray-200">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-10 text-center">Your Degree Application Status</h3>
+                    <div class="flex items-start justify-between w-full max-w-3xl mx-auto mb-10">
+                        <div id="step-submitted" class="status-tracker-step">
+                            <div class="status-tracker-icon-wrapper"><div class="status-tracker-icon"><i data-lucide="file-check-2"></i></div><div class="step-tooltip">Docs uploaded: <span id="submitted-date"></span></div></div>
+                            <p class="font-semibold text-sm status-text">Files Submitted</p><p class="text-xs">Your documents are uploaded.</p>
+                        </div>
+                        <div class="status-tracker-line mt-[25px]"></div>
+                        <div id="step-received" class="status-tracker-step">
+                            <div class="status-tracker-icon-wrapper"><div class="status-tracker-icon"><i data-lucide="user-check"></i></div><div class="step-tooltip">Received by: Admin Office<br>Staff: Ms. A. Rehman</div></div>
+                            <p class="font-semibold text-sm status-text">Received by Staff</p><p class="text-xs">Awaiting admin review.</p>
+                        </div>
+                        <div class="status-tracker-line mt-[25px]"></div>
+                        <div id="step-processing" class="status-tracker-step">
+                            <div class="status-tracker-icon-wrapper"><div class="status-tracker-icon"><i data-lucide="loader-2"></i></div><div class="step-tooltip">Currently under review.<br>Est. time: 3-5 days</div></div>
+                            <p class="font-semibold text-sm status-text">Processing</p><p class="text-xs">Application under review.</p>
+                        </div>
+                        <div class="status-tracker-line mt-[25px]"></div>
+                        <div id="step-completed" class="status-tracker-step">
+                            <div class="status-tracker-icon-wrapper"><div class="status-tracker-icon"><i data-lucide="award"></i></div><div class="step-tooltip">Degree is ready!<br>Collect from office.</div></div>
+                            <p class="font-semibold text-sm status-text">Degree Processed</p><p class="text-xs">Ready for collection/dispatch.</p>
+                        </div>
+                    </div>
+                    <div class="mt-12 text-center">
+                        <p class="text-gray-600 mb-4">You will be notified via email as your application progresses.</p>
+                        <button id="startNewApplicationButton" class="btn-primary text-sm py-2.5 px-6">Start New Application</button>
+                    </div>
+                </div>
+
+         <div id="messageModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 id="modalTitle" class="text-lg font-semibold">Notification</h4>
+                    <button id="closeModalButton" class="text-gray-500 hover:text-gray-700">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <p id="modalMessage" class="text-sm text-gray-700"></p>
+                <div class="mt-6 text-right">
+                    <button id="modalOkButton" class="btn-primary text-sm py-2 px-4">OK</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+    <script src="/socket.io/socket.io.js"></script>
+       <script>
+        const socket = io();
+    
+      socket.on("testing", (data) => {
+        console.log("📥 Live update received:", data.msg);
+      });
+        // Wait for the DOM to be fully loaded before executing scripts
+        document.addEventListener('DOMContentLoaded', function () {
+            
+
+            const log_out = document.querySelector(".logout-b")
+            log_out.addEventListener("click", ()=>{
+
+                fetch("/testing")
+                .then(res => res.json())
+                .then(data => {
+                if (data.success) {
+                    console.log("socketing")
+                }
+
+                })
+            })
+
+
+
+
+
+
+
+
+            fetch("/student-data")
+            .then(res => res.json())
+            .then(data => {
+            if (data.success) {
+                studentData = data.student
+                console.dir(data)
+                console.log(studentData, studentData.student, data)
+                document.getElementById("roll-number").textContent = studentData.roll_no;
+                document.getElementById("student-name").textContent = studentData.student_name;
+                document.getElementById("father-name").textContent = studentData.father_name;
+                document.getElementById("department").textContent = studentData.department;
+                document.getElementById("program").textContent = studentData.program;
+                document.getElementById("cnic-number").textContent = studentData.cnic_number;
+                document.getElementById("mobile-number").textContent = studentData.mobile_no;
+                document.getElementById("institute").textContent = studentData.institute;
+
+                // Welcome and header
+                document.getElementById("welcome-message").textContent = `Welcome back, ${studentData.student_name}!`;
+                document.getElementById("header-student-name").textContent = studentData.student_name;
+                document.getElementById("header-student-id").textContent = `Student ID: ${studentData.roll_no}`;
+            }
+            })
+
+            const navDashboard = document.getElementById('nav-dashboard');
+            const navApplyDegree = document.getElementById('nav-apply-degree');
+            const dashboardView = document.getElementById('dashboard-view');
+            const applyDegreeView = document.getElementById('apply-degree-view');
+            const degreeForm = document.getElementById('degree-application-form');
+
+            const applicationSubmittedMessage = document.getElementById('applicationSubmittedMessage');
+            const degreeFormContainer = document.getElementById('degree-form-container');
+            const degreeStatusTracker = document.getElementById('degree-status-tracker');
+            const startNewApplicationButton = document.getElementById('startNewApplicationButton');
+            
+            // Modal elements
+            const messageModal = document.getElementById('messageModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            const closeModalButton = document.getElementById('closeModalButton');
+            const modalOkButton = document.getElementById('modalOkButton');
+
+            function showModal(title, message) {
+                if (modalTitle) modalTitle.textContent = title;
+                if (modalMessage) modalMessage.textContent = message;
+                if (messageModal) messageModal.classList.remove('hidden');
+            }
+
+            function hideModal() {
+                if (messageModal) messageModal.classList.add('hidden');
+            }
+
+            if(closeModalButton) closeModalButton.addEventListener('click', hideModal);
+            if(modalOkButton) modalOkButton.addEventListener('click', hideModal);
+
+
+            // Set current date
+            const currentDateElement = document.getElementById('current-date');
+            if (currentDateElement) {
+                const today = new Date();
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                currentDateElement.textContent = today.toLocaleDateString('en-US', options);
+            }
+            
+            function setActiveNav(activeNav) {
+                // Ensure navDashboard and navApplyDegree are defined before trying to access classList
+                if (navDashboard) navDashboard.classList.remove('active');
+                if (navApplyDegree) navApplyDegree.classList.remove('active');
+                
+                if(activeNav) activeNav.classList.add('active');
+            }
+
+            if(navDashboard) {
+                navDashboard.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if(dashboardView) dashboardView.classList.remove('hidden');
+                    if(applyDegreeView) applyDegreeView.classList.add('hidden');
+                    setActiveNav(navDashboard);
+                });
+            }
+
+            if(navApplyDegree) {
+                navApplyDegree.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if(dashboardView) dashboardView.classList.add('hidden');
+                    if(applyDegreeView) applyDegreeView.classList.remove('hidden');
+                    setActiveNav(navApplyDegree);
+                });
+            }
+
+            // Handle file input display
+            const fileInputs = document.querySelectorAll("input[type='file']");
+    const totalFiles = fileInputs.length;
+    let uploadedCount = 0;
+
+    const updateGlobalCounter = () => {
+        let counterDisplay = document.querySelector("#global-file-counter");
+        let counterDisplay2 = document.querySelector("#sticky-upload-counter");
+        if (!counterDisplay) {
+            counterDisplay = document.createElement("div");
+            counterDisplay.id = "global-file-counter";
+            counterDisplay.className = "text-right text-sm text-gray-600 mb-4";
+            document.querySelector("#degree-application-form").prepend(counterDisplay);
+        }
+        counterDisplay2.textContent = `Uploaded: ${uploadedCount}/${totalFiles}`;
+        counterDisplay.textContent = `Uploaded: ${uploadedCount}/${totalFiles}`;
+    };
+
+    updateGlobalCounter();
+
+    fileInputs.forEach((input) => {
+        const label = input.closest("label");
+        const display = label.querySelector(".file-name-display");
+        const status = label.querySelector(".file-status");
+        const delBtn = label.querySelector(".file-delete");
+
+        input.addEventListener("change", function () {
+            if (this.files.length > 0) {
+                const file = this.files[0];
+                display.textContent = file.name;
+                display.classList.add("text-green-700", "font-semibold");
+
+                label.classList.add("border-green-500", "bg-green-50");
+                label.classList.remove("border-gray-300");
+
+                status.textContent = "Uploaded ✔";
+                status.classList.remove("hidden");
+                delBtn.classList.remove("hidden");
+
+                uploadedCount++;
+                updateGlobalCounter();
+            }
+        });
+
+        delBtn.addEventListener("click", function () {
+            input.value = ""; // Reset file
+            display.textContent = "Click to upload or drag & drop";
+            display.classList.remove("text-green-700", "font-semibold");
+
+            label.classList.remove("border-green-500", "bg-green-50");
+
+            status.textContent = "";
+            status.classList.add("hidden");
+            delBtn.classList.add("hidden");
+
+            uploadedCount = Math.max(0, uploadedCount - 1);
+            updateGlobalCounter();
+        });
+    });
+const steps = ['step-submitted', 'step-received', 'step-processing', 'step-completed'];
+            const stepLines = document.querySelectorAll('.status-tracker-line');
+
+            function updateTrackerVisuals(currentStepIndex = -1) { 
+                steps.forEach((stepId, index) => {
+                    const stepElement = document.getElementById(stepId);
+                    if (!stepElement) return;
+                    stepElement.classList.remove('completed', 'current');
+                    if (index === currentStepIndex) {
+                        stepElement.classList.add('current');
+                    }
+                });
+
+                stepLines.forEach((line, index) => {
+                    line.classList.remove('completed-connect', 'current-connect');
+                    const prevStep = document.getElementById(steps[index]); 
+                    const nextStep = document.getElementById(steps[index+1]); 
+
+                    if (prevStep && prevStep.classList.contains('completed')) {
+                        line.classList.add('completed-connect');
+                        if (nextStep && nextStep.classList.contains('current')) {
+                             line.classList.add('current-connect'); 
+                        }
+                    }
+                });
+            }
+
+            // Handle degree application form submission
+            if (degreeForm) {
+                degreeForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    let allFilesSelected = true;
+                    const requiredInputs = degreeForm.querySelectorAll('input[type="file"]');
+                    requiredInputs.forEach(input => {
+                        const parentLabel = input.closest('label');
+                        if (input.files.length === 0) {
+                            allFilesSelected = false;
+                            if(parentLabel) parentLabel.style.borderColor = 'red';
+                        } else {
+                            if(parentLabel) parentLabel.style.borderColor = '#cbd5e1'; 
+                        }
+                    });
+
+                    if (allFilesSelected) {
+                        const formData = new FormData(degreeForm);
+                        
+                        fetch('/upload-application', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                console.log("Uploaded to Cloudinary:", data.urls);
+
+                                // existing UI transitions...
+                                degreeFormContainer?.classList.add('hidden');
+                                applicationSubmittedMessage?.classList.remove('hidden');
+                                degreeStatusTracker?.classList.remove('hidden');
+                                
+                                const submittedDateEl = document.getElementById('submitted-date');
+                                if (submittedDateEl) submittedDateEl.textContent = new Date().toLocaleDateString('en-GB');
+
+                                document.getElementById('step-submitted')?.classList.add('completed');
+                                document.getElementById('step-received')?.classList.add('current');
+
+                                setTimeout(() => {
+                                    document.getElementById('step-received')?.classList.remove('current');
+                                    document.getElementById('step-received')?.classList.add('completed');
+                                    document.getElementById('step-processing')?.classList.add('current');
+                                }, 4000);
+
+                                setTimeout(() => {
+                                    document.getElementById('step-processing')?.classList.remove('current');
+                                    document.getElementById('step-processing')?.classList.add('completed');
+                                    document.getElementById('step-completed')?.classList.add('current');
+                                }, 8000);
+
+                            } else {
+                                showModal('Upload Failed', data.message || 'Something went wrong during upload.');
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Upload error:", err);
+                            showModal('Upload Error', 'Server error occurred while uploading.');
+                        });
+                    }
+                });
+            }
+            
+            // Initialize: Show dashboard by default and set active tab
+            if(dashboardView) dashboardView.classList.remove('hidden'); // Explicitly show dashboard
+            if(applyDegreeView) applyDegreeView.classList.add('hidden'); // Explicitly hide other views
+            if(navDashboard) setActiveNav(navDashboard);
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+

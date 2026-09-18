@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background for the page */
+        }
+        .sidebar {
+            background-color: #4A00E0; /* Deep purple */
+        }
+        .sidebar-item {
+            transition: background-color 0.3s ease;
+        }
+        .sidebar-item:hover, .sidebar-item.active {
+            background-color: #6A11CB; /* Lighter purple for hover/active */
+        }
+        .content-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .welcome-banner {
+            background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%); /* Purple gradient */
+        }
+        .btn-primary {
+            background-color: #6A11CB;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #4A00E0;
+        }
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c5c5c5;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a5a5a5;
+        }
+
+        /* Application card styling */
+        .application-card {
+            border: 1px solid #e2e8f0;
+            background: linear-gradient(135deg, #ffffff 0%, #f9f5ff 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            margin-bottom: 0.75rem;
+        }
+        
+        .application-card:hover {
+            box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1), 0 6px 8px -2px rgba(0, 0, 0, 0.05);
+            border-color: #a78bfa;
+            transform: translateY(-1px);
+        }
+
+        .application-header {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        /* Adjusted styles for application details expansion */
+        .application-details {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.4s ease-out;
+        }
+
+        .application-details.expanded {
+            max-height: 2000px; /* Increased to accommodate more content and prevent breakdown */
+            opacity: 1;
+            padding: 1rem 1.5rem 1.5rem 1.5rem; /* Added top padding for better spacing when expanded */
+        }
+
+        .toggle-chevron {
+            transition: transform 0.3s ease;
+            font-size: 1.25rem;
+            color: #6B7280;
+        }
+
+        .toggle-chevron.rotated {
+            transform: rotate(180deg);
+        }
+
+        .section-separator {
+            border-top: 1px solid #f1f5f9;
+            margin: 1.25rem 0;
+            padding-top: 1.25rem;
+        }
+
+        .hover-actions {
+            position: absolute;
+            top: 50%;
+            right: 4rem;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+
+        .application-card:hover .hover-actions {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .hover-btn {
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .hover-btn.take {
+            background-color: #a78bfa;
+            color: white;
+        }
+
+        .hover-btn.take:hover {
+            background-color: #8b5cf6;
+            transform: scale(1.05);
+        }
+
+        .hover-btn.complete {
+            background-color: #34d399;
+            color: white;
+        }
+
+        .hover-btn.complete:hover {
+            background-color: #10b981;
+            transform: scale(1.05);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-pending {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+
+        .status-processing {
+            background-color: #dbeafe;
+            color: #2563eb;
+        }
+
+        .status-completed {
+            background-color: #d1fae5;
+            color: #059669;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .detail-item {
+            padding: 0.5rem 0;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            font-size: 0.875rem;
+            color: #1f2937;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <aside class="sidebar w-64 min-h-screen p-6 flex flex-col justify-between">
+        <div>
+            <div class="flex items-center space-x-3 mb-10">
+                <i class="fas fa-briefcase text-white text-2xl"></i>
+                <h1 class="text-2xl font-bold text-white">Staff Portal</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li class="mb-3">
+                        <a href="#" id="nav-dashboard" class="sidebar-item active flex items-center space-x-3 text-purple-100 hover:text-white p-3 rounded-lg">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="mb-3">
+                        <a href="#" id="nav-all-students" class="sidebar-item flex items-center space-x-3 text-purple-100 hover:text-white p-3 rounded-lg">
+                           <i class="fas fa-users"></i>
+                            <span>All Students</span>
+                        </a>
+                    </li>
+                    <li class="mb-3">
+                        <a href="#" id="nav-applications" class="sidebar-item flex items-center space-x-3 text-purple-100 hover:text-white p-3 rounded-lg">
+                           <i class="fas fa-clipboard-list"></i>
+                            <span>Applications</span>
+                        </a>
+                    </li>
+                    <li class="mb-3">
+                        <a href="#" id="nav-access" class="sidebar-item flex items-center space-x-3 text-purple-100 hover:text-white p-3 rounded-lg">
+                           <i class="fas fa-key"></i>
+                            <span>Access</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div>
+            <a href="#" class="sidebar-item flex items-center space-x-3 text-purple-100 hover:text-white p-3 rounded-lg">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-6 lg:p-8 overflow-y-auto">
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-8">
+            <div class="relative w-full sm:w-auto mb-4 sm:mb-0">
+                <input type="text" placeholder="Search..." class="pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none w-full sm:w-72 transition-all duration-300">
+                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <p id="header-staff-name" class="font-semibold text-gray-800">Staff Member</p>
+                    <p id="header-staff-id" class="text-sm text-gray-500">Staff ID: STAFF-001</p>
+                </div>
+                <img src="https://placehold.co/40x40/E2E8F0/4A5568?text=SM" alt="User Avatar" class="w-10 h-10 rounded-full">
+            </div>
+        </header>  
+
+        <div id="dashboard-view">
+            <div class="welcome-banner p-8 rounded-xl text-white mb-8 shadow-lg">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p id="current-date" class="text-sm opacity-80 mb-1">September 4, 2023</p>
+                        <h2 id="welcome-message" class="text-3xl font-bold mb-1">Welcome back, Staff!</h2>
+                        <p class="opacity-90">Manage student applications and data efficiently.</p>
+                    </div>
+                    <img src="https://placehold.co/150x150/FFFFFF/4A00E0?text=Staff+Illustration" alt="Staff Illustration" class="w-24 h-24 lg:w-32 lg:h-32 hidden sm:block rounded-full object-cover">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="content-card p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-6">Application Summary</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                        <div>
+                            <p class="text-gray-500">Total Applications</p>
+                            <p id="total-applications" class="font-medium text-gray-700 text-2xl">0</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Pending Applications</p>
+                            <p id="pending-applications" class="font-medium text-gray-700 text-2xl">0</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Processing Applications</p>
+                            <p id="processing-applications" class="font-medium text-gray-700 text-2xl">0</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Completed Applications</p>
+                            <p id="completed-applications" class="font-medium text-gray-700 text-2xl">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-800">Recent Activity</h3>
+                        <a href="#" class="text-sm text-purple-600 hover:text-purple-800 font-medium">View all</a>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <h4 class="font-semibold text-blue-700">Application #APP001 Processed</h4>
+                            <p class="text-sm text-blue-600 mt-1">John Doe's application moved to 'Processing'.</p>
+                            <p class="text-xs text-blue-500 mt-1">2 hours ago</p>
+                        </div>
+                        <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                            <h4 class="font-semibold text-green-700">New Student Registered</h4>
+                            <p class="text-sm text-green-600 mt-1">Jane Smith (ID: CS-2024-002) joined.</p>
+                            <p class="text-xs text-green-500 mt-1">Yesterday</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="all-students-view" class="hidden">
+            <div class="content-card p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">All Registered Students</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roll Number</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Name</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-table-body" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="applications-view" class="hidden">
+            <div class="content-card p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">New Degree Applications</h2>
+                <div id="applications-list">
+                    </div>
+            </div>
+        </div>
+
+        <div id="access-view" class="hidden">
+            <div class="content-card p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Add New Staff Member</h2>
+                <form id="add-staff-form" class="space-y-4">
+                    <div>
+                        <label for="staff-id" class="block text-sm font-medium text-gray-700 mb-1">Staff ID</label>
+                        <input type="text" id="staff-id" name="staffId" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="e.g., STF-001" required>
+                    </div>
+                    <div>
+                        <label for="staff-name" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input type="text" id="staff-name" name="staffName" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="e.g., Jane Doe" required>
+                    </div>
+                    <div>
+                        <label for="staff-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="staff-email" name="staffEmail" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="e.g., jane.doe@university.edu" required>
+                    </div>
+                    <div>
+                        <label for="staff-role" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                        <select id="staff-role" name="staffRole" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                            <option value="">Select Role</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Faculty">Faculty</option>
+                            <option value="Registrar">Registrar</option>
+                            <option value="Admissions">Admissions</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="staff-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="staff-password" name="staffPassword" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Set initial password" required>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" id="clear-staff-form" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors duration-200">Clear Form</button>
+                        <button type="submit" class="btn-primary text-sm py-2 px-4">Add Staff</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+         <div id="messageModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 id="modalTitle" class="text-lg font-semibold">Notification</h4>
+                    <button id="closeModalButton" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <p id="modalMessage" class="text-sm text-gray-700"></p>
+                <div class="mt-6 text-right">
+                    <button id="modalOkButton" class="btn-primary text-sm py-2 px-4">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="studentDetailsModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full overflow-y-auto max-h-[90vh]">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="text-lg font-semibold">Student Details</h4>
+                    <button id="closeStudentDetailsModalButton" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="studentDetailsContent" class="text-sm text-gray-700 space-y-3">
+                    </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button id="cancelStudentChangesButton" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors duration-200">Cancel</button>
+                    <button id="saveStudentChangesButton" class="btn-primary text-sm py-2 px-4">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let dummyStudents = [];
+        let dummyApplications = [];
+        fetch("/staff-data")
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      const allStudents = data.all_students;
+
+      // Transform students into the expected dummyStudents format
+       dummyStudents = students(allStudents)
+      // Create dummyApplications based on student.application object
+       dummyApplications = applications(allStudents)
+
+      console.log("dummyStudents", dummyStudents);
+      console.log("dummyApplications", dummyApplications);
+
+      // You can now use dummyStudents and dummyApplications to render your UI
+    }
+  })
+  .catch(err => console.error("Failed to fetch staff data:", err));
+
+const socket = io();
+
+  socket.on("new-application", (data) => {
+    console.log("📥 Live update received:", data.msg);
+    students(data.msg)
+    applications(data.msg)
+  });
+function students(allStudents){
+    dummyStudents = allStudents.map(student => ({
+        id: student.roll_no || "", // fallback if id missing
+        roll_no: student.roll_no,
+        student_name: student.student_name,
+        father_name: student.father_name,
+        department: student.department,
+        program: student.program,
+        cnic_number: student.cnic_number,
+        mobile_no: student.mobile_no,
+        institute: student.institute
+      }));
+    return dummyStudents
+}
+
+function applications(allStudents){
+    dummyApplications = allStudents
+        .filter(s => s.application && s.application.status && s.application.status.toLowerCase() !== "inactive")
+        .map((s, i) => ({
+          id: `APP${(i + 1).toString().padStart(3, "0")}`,
+          studentId: s.roll_no,
+          studentName: s.student_name,
+          applicationDate: s.application.submittedAt ? new Date(s.application.submittedAt).toISOString() : new Date().toISOString(),
+          status: capitalize(s.application.status),
+          processedBy: s.application.processedBy || null,
+          processedByName: s.application.processedByName || null
+        }));
+    return dummyApplications
+}
+
+// Helper to capitalize first letter (optional)
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+        // Function to show custom modal messages
+        function showModal(title, message) {
+            const messageModal = document.getElementById('messageModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            if (modalTitle) modalTitle.textContent = title;
+            if (modalMessage) modalMessage.textContent = message;
+            if (messageModal) messageModal.classList.remove('hidden');
+        }
+
+        // Function to hide custom modal messages
+        function hideModal() {
+            const messageModal = document.getElementById('messageModal');
+            if (messageModal) messageModal.classList.add('hidden');
+        }
+
+        // Function to show student details modal with editable fields
+        function showStudentDetailsModal(student) {
+            const studentDetailsModal = document.getElementById('studentDetailsModal');
+            const studentDetailsContent = document.getElementById('studentDetailsContent');
+            
+            // Store the student ID in the modal for saving changes (simulated)
+            studentDetailsModal.dataset.studentId = student.id;
+
+            if (studentDetailsContent) {
+                studentDetailsContent.innerHTML = `
+                    <div class="flex flex-col">
+                        <label for="edit-roll-no" class="text-gray-500 text-xs mb-1">Roll Number</label>
+                        <input type="text" id="edit-roll-no" data-field="roll_no" value="${student.roll_no}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="edit-student-name" class="text-gray-500 text-xs mb-1">Student Name</label>
+                        <input type="text" id="edit-student-name" data-field="student_name" value="${student.student_name}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="edit-father-name" class="text-gray-500 text-xs mb-1">Father's Name</label>
+                        <input type="text" id="edit-father-name" data-field="father_name" value="${student.father_name}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="edit-department" class="text-gray-500 text-xs mb-1">Department</label>
+                        <input type="text" id="edit-department" data-field="department" value="${student.department}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="edit-program" class="text-gray-500 text-xs mb-1">Program</label>
+                        <input type="text" id="edit-program" data-field="program" value="${student.program}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="edit-cnic-number" class="text-gray-500 text-xs mb-1">CNIC Number</label>
+                        <input type="text" id="edit-cnic-number" data-field="cnic_number" value="${student.cnic_number}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="edit-mobile-number" class="text-gray-500 text-xs mb-1">Mobile Number</label>
+                        <input type="text" id="edit-mobile-number" data-field="mobile_no" value="${student.mobile_no}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="edit-institute" class="text-gray-500 text-xs mb-1">Institute</label>
+                        <input type="text" id="edit-institute" data-field="institute" value="${student.institute}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                `;
+            }
+            if (studentDetailsModal) studentDetailsModal.classList.remove('hidden');
+        }
+
+        // Function to hide student details modal
+        function hideStudentDetailsModal() {
+            const studentDetailsModal = document.getElementById('studentDetailsModal');
+            if (studentDetailsModal) studentDetailsModal.classList.add('hidden');
+        }
+
+        // DOMContentLoaded event listener
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Get DOM elements for navigation and views
+            const navDashboard = document.getElementById('nav-dashboard');
+            const navAllStudents = document.getElementById('nav-all-students');
+            const navApplications = document.getElementById('nav-applications');
+            const navAccess = document.getElementById('nav-access');
+
+            const dashboardView = document.getElementById('dashboard-view');
+            const allStudentsView = document.getElementById('all-students-view');
+            const applicationsView = document.getElementById('applications-view');
+            const accessView = document.getElementById('access-view');
+
+            const studentsTableBody = document.getElementById('students-table-body');
+            const applicationsList = document.getElementById('applications-list');
+            const addStaffForm = document.getElementById('add-staff-form');
+            const clearStaffFormButton = document.getElementById('clear-staff-form');
+
+            // Modal elements
+            const closeModalButton = document.getElementById('closeModalButton');
+            const modalOkButton = document.getElementById('modalOkButton');
+            if(closeModalButton) closeModalButton.addEventListener('click', hideModal);
+            if(modalOkButton) modalOkButton.addEventListener('click', hideModal);
+
+            const closeStudentDetailsModalButton = document.getElementById('closeStudentDetailsModalButton');
+            const cancelStudentChangesButton = document.getElementById('cancelStudentChangesButton');
+            const saveStudentChangesButton = document.getElementById('saveStudentChangesButton');
+
+            if(closeStudentDetailsModalButton) closeStudentDetailsModalButton.addEventListener('click', hideStudentDetailsModal);
+            if(cancelStudentChangesButton) cancelStudentChangesButton.addEventListener('click', hideStudentDetailsModal);
+            if(saveStudentChangesButton) {
+                saveStudentChangesButton.addEventListener('click', async () => {
+                    // In a real app, you would send updatedData to your backend/Firebase
+                    showModal('Success', 'Student details saved (simulated). Changes will not persist without a backend.');
+                    hideStudentDetailsModal();
+                });
+            }
+
+            // Handle Add Staff Form submission
+            if(addStaffForm) {
+                addStaffForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const staffId = document.getElementById('staff-id').value;
+                    const staffName = document.getElementById('staff-name').value;
+                    const staffEmail = document.getElementById('staff-email').value;
+                    const staffRole = document.getElementById('staff-role').value;
+                    const staffPassword = document.getElementById('staff-password').value;
+
+                    // Simulate adding staff
+                    showModal('Staff Added', `New staff member ${staffName} (${staffId}) with role ${staffRole} added (simulated).`);
+                    addStaffForm.reset(); // Clear the form
+                });
+            }
+
+            // Handle Clear Staff Form button
+            if(clearStaffFormButton) {
+                clearStaffFormButton.addEventListener('click', () => {
+                    addStaffForm.reset();
+                });
+            }
+
+            // Set current date
+            const currentDateElement = document.getElementById('current-date');
+            if (currentDateElement) {
+                const today = new Date();
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                currentDateElement.textContent = today.toLocaleDateString('en-US', options);
+            }
+            
+            // Function to set active navigation item and show/hide views
+            function setActiveNav(activeNav) {
+                [navDashboard, navAllStudents, navApplications, navAccess].forEach(nav => {
+                    if (nav) nav.classList.remove('active');
+                });
+                if (activeNav) activeNav.classList.add('active');
+
+                [dashboardView, allStudentsView, applicationsView, accessView].forEach(view => {
+                    if (view) view.classList.add('hidden');
+                });
+
+                if (activeNav === navDashboard && dashboardView) dashboardView.classList.remove('hidden');
+                else if (activeNav === navAllStudents && allStudentsView) allStudentsView.classList.remove('hidden');
+                else if (activeNav === navApplications && applicationsView) applicationsView.classList.remove('hidden');
+                else if (activeNav === navAccess && accessView) accessView.classList.remove('hidden');
+            }
+
+            // Navigation event listeners
+            if(navDashboard) {
+                navDashboard.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    setActiveNav(navDashboard);
+                });
+            }
+
+            if(navAllStudents) {
+                navAllStudents.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    setActiveNav(navAllStudents);
+                    renderStudentsTable(dummyStudents); // Render students when tab is active
+                });
+            }
+
+            if(navApplications) {
+                navApplications.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    setActiveNav(navApplications);
+                    renderApplicationsList(dummyApplications); // Render applications when tab is active
+                });
+            }
+
+            // New navigation event listener for Access tab
+            if(navAccess) {
+                navAccess.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    setActiveNav(navAccess);
+                });
+            }
+
+            // Initialize: Show dashboard by default and set active tab
+            setActiveNav(navDashboard);
+            // Initial render for dashboard summary
+            updateApplicationSummary(dummyApplications);
+
+
+            // Function to render students table
+            function renderStudentsTable(students) {
+                if (!studentsTableBody) return;
+                studentsTableBody.innerHTML = ''; // Clear existing rows
+                if (students.length === 0) {
+                    studentsTableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No student records found.</td></tr>`;
+                    return;
+                }
+                students.forEach(student => {
+                    const row = studentsTableBody.insertRow();
+                    row.className = 'whitespace-nowrap';
+                    row.innerHTML = `
+                        <td class="px-6 py-4">${student.roll_no}</td>
+                        <td class="px-6 py-4 font-medium">${student.student_name}</td>
+                        <td class="px-6 py-4">${student.program}</td>
+                        <td class="px-6 py-4">${student.department}</td>
+                        <td class="px-6 py-4 text-right text-sm font-medium">
+                            <button data-student-id="${student.id}" class="view-student-btn text-purple-600 hover:text-purple-900">View Details</button>
+                        </td>
+                    `;
+                });
+
+                // Add event listeners for "View Details" buttons
+                studentsTableBody.querySelectorAll('.view-student-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const studentId = e.target.dataset.studentId;
+                        const student = dummyStudents.find(s => s.id === studentId); // Use dummy data
+                        if (student) {
+                            showStudentDetailsModal(student);
+                        }
+                    });
+                });
+            }
+
+            // Function to render applications list as cards
+            function renderApplicationsList(applications) {
+                if (!applicationsList) return;
+                applicationsList.innerHTML = ''; // Clear existing content
+                if (applications.length === 0) {
+                    applicationsList.innerHTML = `<div class="px-6 py-4 text-center text-gray-500">No new applications.</div>`;
+                    return;
+                }
+
+                // Sort applications by status (Pending first), then by date (oldest first)
+                applications.sort((a, b) => {
+                    const statusOrder = { "Pending": 1, "Processing": 2, "Completed": 3 };
+                    if (statusOrder[a.status] !== statusOrder[b.status]) {
+                        return statusOrder[a.status] - statusOrder[b.status];
+                    }
+                    return new Date(a.applicationDate) - new Date(b.applicationDate);
+                });
+
+                applications.forEach(app => {
+                    const formattedDate = new Date(app.applicationDate).toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+
+                    // Find the corresponding student details from dummyStudents
+                    const applicantDetails = dummyStudents.find(student => student.id === app.studentId);
+
+                    let actionButtonsOverlayHtml = ''; // Changed name for clarity
+                    let actionButtonInDetails = '';
+                    let statusColorClass = '';
+                    let processedByText = app.processedByName || 'N/A';
+
+                    if (app.status === 'Pending') {
+                        // Hover action buttons
+                        actionButtonsOverlayHtml = `
+                            <button data-app-id="${app.id}" class="take-application-btn-hover hover-btn take" title="Take Application">
+                                <i class="fas fa-briefcase"></i> Take
+                            </button>
+                        `;
+                        // Button inside unfolded details
+                        actionButtonInDetails = `
+                            <button data-app-id="${app.id}" class="take-application-btn btn-primary text-sm py-2 px-4 mt-4">Take Application</button>
+                        `;
+                        statusColorClass = 'status-pending';
+                    } else if (app.status === 'Processing') {
+                        // Hover action buttons
+                        actionButtonsOverlayHtml = `
+                            <button data-app-id="${app.id}" class="complete-application-btn-hover hover-btn complete" title="Mark Complete">
+                                <i class="fas fa-check-circle"></i> Complete
+                            </button>
+                        `;
+                        // Button inside unfolded details
+                        actionButtonInDetails = `
+                            <button data-app-id="${app.id}" class="complete-application-btn bg-green-500 hover:bg-green-700 text-white text-sm py-2 px-4 rounded-md mt-4">Mark Complete</button>
+                        `;
+                        statusColorClass = 'status-processing';
+                    } else if (app.status === 'Completed') {
+                        statusColorClass = 'status-completed';
+                        actionButtonsOverlayHtml = `<span class="text-gray-500 text-xs">Completed</span>`;
+                        actionButtonInDetails = `<span class="text-gray-500 text-sm mt-4 block">Application Completed</span>`;
+                    }
+
+                    const appCard = document.createElement('div');
+                    appCard.className = 'application-card content-card p-4 rounded-lg shadow-sm';
+                    appCard.innerHTML = `
+                        <div class="application-header flex justify-between items-center cursor-pointer relative group">
+                            <div class="flex-1 flex items-center space-x-4">
+                                <div class="font-medium text-gray-900">
+                                    ${app.studentName} <span class="text-gray-500 text-sm">(ID: ${app.studentId})</span>
+                                </div>
+                                <div class="status-badge ${statusColorClass}">${app.status}</div>
+                            </div>
+                            <div class="hover-actions">
+                                ${actionButtonsOverlayHtml}
+                            </div>
+                            <button class="toggle-details-btn text-gray-500 hover:text-purple-700 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
+                                <i class="fas fa-chevron-down toggle-chevron"></i>
+                            </button>
+                        </div>
+                        <div class="application-details">
+                            <div class="applicant-details-section">
+                                <h4 class="font-semibold text-gray-800 mb-2">Applicant Details</h4>
+                                ${applicantDetails ? `
+                                    <div class="detail-grid">
+                                        <div class="detail-item"><div class="detail-label">Roll Number</div><div class="detail-value">${applicantDetails.roll_no}</div></div>
+                                        <div class="detail-item"><div class="detail-label">Student Name</div><div class="detail-value">${applicantDetails.student_name}</div></div>
+                                        <div class="detail-item"><div class="detail-label">Father's Name</div><div class="detail-value">${applicantDetails.father_name}</div></div>
+                                        <div class="detail-item"><div class="detail-label">Department</div><div class="detail-value">${applicantDetails.department}</div></div>
+                                        <div class="detail-item"><div class="detail-label">Program</div><div class="detail-value">${applicantDetails.program}</div></div>
+                                        <div class="detail-item"><div class="detail-label">CNIC Number</div><div class="detail-value">${applicantDetails.cnic_number}</div></div>
+                                        <div class="detail-item"><div class="detail-label">Mobile Number</div><div class="detail-value">${applicantDetails.mobile_no}</div></div>
+                                        <div class="detail-item"><div class="detail-label">Institute</div><div class="detail-value">${applicantDetails.institute}</div></div>
+                                    </div>
+                                ` : `<p class="text-gray-500">Applicant details not found.</p>`}
+                            </div>
+
+                            <div class="application-action-section section-separator">
+                                <h4 class="font-semibold text-gray-800 mb-2">Application Status & Actions</h4>
+                                <p class="text-sm text-gray-600 mb-1"><span class="font-medium">Application ID:</span> ${app.id}</p>
+                                <p class="text-sm text-gray-600 mb-1"><span class="font-medium">Application Date:</span> ${formattedDate}</p>
+                                <p class="text-sm text-gray-600 mb-4"><span class="font-medium">Processed By:</span> ${processedByText}</p>
+                                ${actionButtonInDetails}
+                            </div>
+                        </div>
+                    `;
+                    applicationsList.appendChild(appCard);
+
+                    // Add event listener to the application-header for toggling details
+                    const header = appCard.querySelector('.application-header');
+                    header.addEventListener('click', (e) => {
+                        // Prevent toggling if the click target is an action button or the chevron button itself
+                        if (e.target.closest('.hover-btn') || e.target.closest('.toggle-details-btn') || e.target.closest('.take-application-btn') || e.target.closest('.complete-application-btn')) {
+                            return;
+                        }
+
+                        const detailsDiv = appCard.querySelector('.application-details');
+                        const icon = appCard.querySelector('.toggle-chevron'); // Get the chevron icon
+
+                        if (detailsDiv.classList.contains('expanded')) {
+                            detailsDiv.classList.remove('expanded');
+                            icon.classList.remove('rotated');
+                        } else {
+                            detailsDiv.classList.add('expanded');
+                            icon.classList.add('rotated');
+                        }
+                    });
+                });
+
+                // Add event listeners for "Toggle Details" buttons (chevron)
+                applicationsList.querySelectorAll('.toggle-details-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Stop propagation to prevent header's click listener from firing
+                        const detailsDiv = e.currentTarget.closest('.application-card').querySelector('.application-details');
+                        const icon = e.currentTarget.querySelector('.toggle-chevron');
+                        if (detailsDiv.classList.contains('expanded')) {
+                            detailsDiv.classList.remove('expanded');
+                            icon.classList.remove('rotated');
+                        } else {
+                            detailsDiv.classList.add('expanded');
+                            icon.classList.add('rotated');
+                        }
+                    });
+                });
+
+                // Event listeners for hover action buttons
+                applicationsList.querySelectorAll('.take-application-btn-hover, .complete-application-btn-hover').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        e.stopPropagation(); // Prevent click from triggering fold/unfold
+                        showModal('Action Simulated', `Application ${e.currentTarget.dataset.appId} action triggered (simulated).`);
+                    });
+                });
+
+                // Event listeners for full buttons inside details (take-application-btn)
+                applicationsList.querySelectorAll('.take-application-btn, .complete-application-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        e.stopPropagation(); // Prevent click from triggering fold/unfold
+                        showModal('Action Simulated', `Application ${e.currentTarget.dataset.appId} action triggered (simulated).`);
+                    });
+                });
+            }
+
+            // Function to update application summary on dashboard
+            function updateApplicationSummary(applications) {
+                let total = applications.length;
+                let pending = applications.filter(app => app.status === 'Pending').length;
+                let processing = applications.filter(app => app.status === 'Processing').length;
+                let completed = applications.filter(app => app.status === 'Completed').length;
+
+                document.getElementById('total-applications').textContent = total;
+                document.getElementById('pending-applications').textContent = pending;
+                document.getElementById('processing-applications').textContent = processing;
+                document.getElementById('completed-applications').textContent = completed;
+            }
+        });
+    </script>
+</body>
+</html>
