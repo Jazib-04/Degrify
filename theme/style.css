@@ -1,0 +1,14 @@
+
+.field-error {
+  color: #ff4d4f;
+  font-size: 12px;
+  margin-top: 4px;
+}
+input.error {
+  border: 1px solid #ff4d4f !important;
+}
+
+#login-message, #signup-message, #admin-message{
+  color: #FF4C4C;
+  border-radius: 10%;
+}
