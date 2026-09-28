@@ -184,16 +184,26 @@ app.get('/staff-data', async (req, res) => {
       return res.status(404).json({ success: false, message: "Staff not found." });
     }
 
-    // Aggregate application status counts
+    // Fix: Properly aggregate application status counts with case-insensitive matching
     const pipeline = [
       {
         $match: {
-          'application.status': { $in: ['pending', 'processing', 'completed'] }
+          'application.status': { $exists: true, $ne: null }
+        }
+      },
+      {
+        $addFields: {
+          normalizedStatus: { $toLower: "$application.status" }
+        }
+      },
+      {
+        $match: {
+          normalizedStatus: { $in: ['pending', 'processing', 'completed'] }
         }
       },
       {
         $group: {
-          _id: '$application.status',
+          _id: '$normalizedStatus',
           count: { $sum: 1 }
         }
       }

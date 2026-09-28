@@ -429,469 +429,480 @@
 
     </main>
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        let dummyStudents = [];
-        let dummyApplications = [];
-        fetch("/staff-data")
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      const allStudents = data.all_students;
+<script>
+    let dummyStudents = [];
+    let dummyApplications = [];
+    
+    // Initialize Socket.IO
+    const socket = io();
 
-      // Transform students into the expected dummyStudents format
-       dummyStudents = students(allStudents)
-      // Create dummyApplications based on student.application object
-       dummyApplications = applications(allStudents)
+    socket.on("new-application", (data) => {
+        console.log("📥 Live update received:", data.msg);
+        
+        // Update students and applications
+        dummyStudents = students(data.msg);
+        dummyApplications = applications(data.msg);
+        
+        // Update UI immediately
+        updateApplicationSummary(dummyApplications);
+        
+        // If currently viewing applications, re-render the list
+        if (!document.getElementById('applications-view').classList.contains('hidden')) {
+            renderApplicationsList(dummyApplications);
+        }
+        
+        // If currently viewing students, re-render the table
+        if (!document.getElementById('all-students-view').classList.contains('hidden')) {
+            renderStudentsTable(dummyStudents);
+        }
+    });
 
-      console.log("dummyStudents", dummyStudents);
-      console.log("dummyApplications", dummyApplications);
+    // Initial data fetch
+    fetch("/staff-data")
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const allStudents = data.all_students;
 
-      // You can now use dummyStudents and dummyApplications to render your UI
-    }
-  })
-  .catch(err => console.error("Failed to fetch staff data:", err));
+                // Transform students into the expected dummyStudents format
+                dummyStudents = students(allStudents);
+                
+                // Create dummyApplications based on student.application object
+                dummyApplications = applications(allStudents);
 
-const socket = io();
+                console.log("dummyStudents", dummyStudents);
+                console.log("dummyApplications", dummyApplications);
 
-  socket.on("new-application", (data) => {
-    console.log("📥 Live update received:", data.msg);
-    students(data.msg)
-    applications(data.msg)
-  });
-function students(allStudents){
-    dummyStudents = allStudents.map(student => ({
-        id: student.roll_no || "", // fallback if id missing
-        roll_no: student.roll_no,
-        student_name: student.student_name,
-        father_name: student.father_name,
-        department: student.department,
-        program: student.program,
-        cnic_number: student.cnic_number,
-        mobile_no: student.mobile_no,
-        institute: student.institute
-      }));
-    return dummyStudents
-}
+                // Update dashboard summary
+                updateApplicationSummary(dummyApplications);
+            }
+        })
+        .catch(err => console.error("Failed to fetch staff data:", err));
 
-function applications(allStudents){
-    dummyApplications = allStudents
-        .filter(s => s.application && s.application.status && s.application.status.toLowerCase() !== "inactive")
-        .map((s, i) => ({
-          id: `APP${(i + 1).toString().padStart(3, "0")}`,
-          studentId: s.roll_no,
-          studentName: s.student_name,
-          applicationDate: s.application.submittedAt ? new Date(s.application.submittedAt).toISOString() : new Date().toISOString(),
-          status: capitalize(s.application.status),
-          processedBy: s.application.processedBy || null,
-          processedByName: s.application.processedByName || null
+    function students(allStudents) {
+        return allStudents.map(student => ({
+            id: student.roll_no || "",
+            roll_no: student.roll_no,
+            student_name: student.student_name,
+            father_name: student.father_name,
+            department: student.department,
+            program: student.program,
+            cnic_number: student.cnic_number,
+            mobile_no: student.mobile_no,
+            institute: student.institute
         }));
-    return dummyApplications
-}
+    }
 
-// Helper to capitalize first letter (optional)
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-        // Function to show custom modal messages
-        function showModal(title, message) {
-            const messageModal = document.getElementById('messageModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalMessage = document.getElementById('modalMessage');
-            if (modalTitle) modalTitle.textContent = title;
-            if (modalMessage) modalMessage.textContent = message;
-            if (messageModal) messageModal.classList.remove('hidden');
+    function applications(allStudents) {
+        return allStudents
+            .filter(s => s.application && s.application.status && s.application.status.toLowerCase() !== "inactive")
+            .map((s, i) => ({
+                id: `APP${(i + 1).toString().padStart(3, "0")}`,
+                studentId: s.roll_no,
+                studentName: s.student_name,
+                applicationDate: s.application.submittedAt ? new Date(s.application.submittedAt).toISOString() : new Date().toISOString(),
+                status: capitalize(s.application.status),
+                processedBy: s.application.processedBy || null,
+                processedByName: s.application.processedByName || null
+            }));
+    }
+
+    // Helper to capitalize first letter
+    function capitalize(str) {
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    }
+
+    // Function to show custom modal messages
+    function showModal(title, message) {
+        const messageModal = document.getElementById('messageModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        if (modalTitle) modalTitle.textContent = title;
+        if (modalMessage) modalMessage.textContent = message;
+        if (messageModal) messageModal.classList.remove('hidden');
+    }
+
+    // Function to hide custom modal messages
+    function hideModal() {
+        const messageModal = document.getElementById('messageModal');
+        if (messageModal) messageModal.classList.add('hidden');
+    }
+
+    // Function to show student details modal with editable fields
+    function showStudentDetailsModal(student) {
+        const studentDetailsModal = document.getElementById('studentDetailsModal');
+        const studentDetailsContent = document.getElementById('studentDetailsContent');
+        
+        studentDetailsModal.dataset.studentId = student.id;
+
+        if (studentDetailsContent) {
+            studentDetailsContent.innerHTML = `
+                <div class="flex flex-col">
+                    <label for="edit-roll-no" class="text-gray-500 text-xs mb-1">Roll Number</label>
+                    <input type="text" id="edit-roll-no" data-field="roll_no" value="${student.roll_no}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="edit-student-name" class="text-gray-500 text-xs mb-1">Student Name</label>
+                    <input type="text" id="edit-student-name" data-field="student_name" value="${student.student_name}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="edit-father-name" class="text-gray-500 text-xs mb-1">Father's Name</label>
+                    <input type="text" id="edit-father-name" data-field="father_name" value="${student.father_name}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="edit-department" class="text-gray-500 text-xs mb-1">Department</label>
+                    <input type="text" id="edit-department" data-field="department" value="${student.department}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="edit-program" class="text-gray-500 text-xs mb-1">Program</label>
+                    <input type="text" id="edit-program" data-field="program" value="${student.program}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="edit-cnic-number" class="text-gray-500 text-xs mb-1">CNIC Number</label>
+                    <input type="text" id="edit-cnic-number" data-field="cnic_number" value="${student.cnic_number}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="edit-mobile-number" class="text-gray-500 text-xs mb-1">Mobile Number</label>
+                    <input type="text" id="edit-mobile-number" data-field="mobile_no" value="${student.mobile_no}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="edit-institute" class="text-gray-500 text-xs mb-1">Institute</label>
+                    <input type="text" id="edit-institute" data-field="institute" value="${student.institute}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+            `;
+        }
+        if (studentDetailsModal) studentDetailsModal.classList.remove('hidden');
+    }
+
+    // Function to hide student details modal
+    function hideStudentDetailsModal() {
+        const studentDetailsModal = document.getElementById('studentDetailsModal');
+        if (studentDetailsModal) studentDetailsModal.classList.add('hidden');
+    }
+
+    // Function to update application summary on dashboard
+    function updateApplicationSummary(applications) {
+        let total = applications.length;
+        let pending = applications.filter(app => app.status.toLowerCase() === 'pending').length;
+        let processing = applications.filter(app => app.status.toLowerCase() === 'processing').length;
+        let completed = applications.filter(app => app.status.toLowerCase() === 'completed').length;
+
+        const totalEl = document.getElementById('total-applications');
+        const pendingEl = document.getElementById('pending-applications');
+        const processingEl = document.getElementById('processing-applications');
+        const completedEl = document.getElementById('completed-applications');
+
+        if (totalEl) totalEl.textContent = total;
+        if (pendingEl) pendingEl.textContent = pending;
+        if (processingEl) processingEl.textContent = processing;
+        if (completedEl) completedEl.textContent = completed;
+    }
+
+    // DOMContentLoaded event listener
+    document.addEventListener('DOMContentLoaded', async function () {
+        // Get DOM elements for navigation and views
+        const navDashboard = document.getElementById('nav-dashboard');
+        const navAllStudents = document.getElementById('nav-all-students');
+        const navApplications = document.getElementById('nav-applications');
+        const navAccess = document.getElementById('nav-access');
+
+        const dashboardView = document.getElementById('dashboard-view');
+        const allStudentsView = document.getElementById('all-students-view');
+        const applicationsView = document.getElementById('applications-view');
+        const accessView = document.getElementById('access-view');
+
+        const studentsTableBody = document.getElementById('students-table-body');
+        const applicationsList = document.getElementById('applications-list');
+        const addStaffForm = document.getElementById('add-staff-form');
+        const clearStaffFormButton = document.getElementById('clear-staff-form');
+
+        // Modal elements
+        const closeModalButton = document.getElementById('closeModalButton');
+        const modalOkButton = document.getElementById('modalOkButton');
+        if(closeModalButton) closeModalButton.addEventListener('click', hideModal);
+        if(modalOkButton) modalOkButton.addEventListener('click', hideModal);
+
+        const closeStudentDetailsModalButton = document.getElementById('closeStudentDetailsModalButton');
+        const cancelStudentChangesButton = document.getElementById('cancelStudentChangesButton');
+        const saveStudentChangesButton = document.getElementById('saveStudentChangesButton');
+
+        if(closeStudentDetailsModalButton) closeStudentDetailsModalButton.addEventListener('click', hideStudentDetailsModal);
+        if(cancelStudentChangesButton) cancelStudentChangesButton.addEventListener('click', hideStudentDetailsModal);
+        if(saveStudentChangesButton) {
+            saveStudentChangesButton.addEventListener('click', async () => {
+                showModal('Success', 'Student details saved (simulated). Changes will not persist without a backend.');
+                hideStudentDetailsModal();
+            });
         }
 
-        // Function to hide custom modal messages
-        function hideModal() {
-            const messageModal = document.getElementById('messageModal');
-            if (messageModal) messageModal.classList.add('hidden');
+        // Handle Add Staff Form submission
+        if(addStaffForm) {
+            addStaffForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const staffId = document.getElementById('staff-id').value;
+                const staffName = document.getElementById('staff-name').value;
+                const staffEmail = document.getElementById('staff-email').value;
+                const staffRole = document.getElementById('staff-role').value;
+                const staffPassword = document.getElementById('staff-password').value;
+
+                showModal('Staff Added', `New staff member ${staffName} (${staffId}) with role ${staffRole} added (simulated).`);
+                addStaffForm.reset();
+            });
         }
 
-        // Function to show student details modal with editable fields
-        function showStudentDetailsModal(student) {
-            const studentDetailsModal = document.getElementById('studentDetailsModal');
-            const studentDetailsContent = document.getElementById('studentDetailsContent');
-            
-            // Store the student ID in the modal for saving changes (simulated)
-            studentDetailsModal.dataset.studentId = student.id;
+        // Handle Clear Staff Form button
+        if(clearStaffFormButton) {
+            clearStaffFormButton.addEventListener('click', () => {
+                addStaffForm.reset();
+            });
+        }
 
-            if (studentDetailsContent) {
-                studentDetailsContent.innerHTML = `
-                    <div class="flex flex-col">
-                        <label for="edit-roll-no" class="text-gray-500 text-xs mb-1">Roll Number</label>
-                        <input type="text" id="edit-roll-no" data-field="roll_no" value="${student.roll_no}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+        // Set current date
+        const currentDateElement = document.getElementById('current-date');
+        if (currentDateElement) {
+            const today = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            currentDateElement.textContent = today.toLocaleDateString('en-US', options);
+        }
+        
+        // Function to set active navigation item and show/hide views
+        function setActiveNav(activeNav) {
+            [navDashboard, navAllStudents, navApplications, navAccess].forEach(nav => {
+                if (nav) nav.classList.remove('active');
+            });
+            if (activeNav) activeNav.classList.add('active');
+
+            [dashboardView, allStudentsView, applicationsView, accessView].forEach(view => {
+                if (view) view.classList.add('hidden');
+            });
+
+            if (activeNav === navDashboard && dashboardView) dashboardView.classList.remove('hidden');
+            else if (activeNav === navAllStudents && allStudentsView) allStudentsView.classList.remove('hidden');
+            else if (activeNav === navApplications && applicationsView) applicationsView.classList.remove('hidden');
+            else if (activeNav === navAccess && accessView) accessView.classList.remove('hidden');
+        }
+
+        // Navigation event listeners
+        if(navDashboard) {
+            navDashboard.addEventListener('click', (e) => {
+                e.preventDefault();
+                setActiveNav(navDashboard);
+            });
+        }
+
+        if(navAllStudents) {
+            navAllStudents.addEventListener('click', (e) => {
+                e.preventDefault();
+                setActiveNav(navAllStudents);
+                renderStudentsTable(dummyStudents);
+            });
+        }
+
+        if(navApplications) {
+            navApplications.addEventListener('click', (e) => {
+                e.preventDefault();
+                setActiveNav(navApplications);
+                renderApplicationsList(dummyApplications);
+            });
+        }
+
+        if(navAccess) {
+            navAccess.addEventListener('click', (e) => {
+                e.preventDefault();
+                setActiveNav(navAccess);
+            });
+        }
+
+        // Initialize: Show dashboard by default and set active tab
+        setActiveNav(navDashboard);
+
+        // Function to render students table
+        function renderStudentsTable(students) {
+            if (!studentsTableBody) return;
+            studentsTableBody.innerHTML = '';
+            if (students.length === 0) {
+                studentsTableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No student records found.</td></tr>`;
+                return;
+            }
+            students.forEach(student => {
+                const row = studentsTableBody.insertRow();
+                row.className = 'whitespace-nowrap';
+                row.innerHTML = `
+                    <td class="px-6 py-4">${student.roll_no}</td>
+                    <td class="px-6 py-4 font-medium">${student.student_name}</td>
+                    <td class="px-6 py-4">${student.program}</td>
+                    <td class="px-6 py-4">${student.department}</td>
+                    <td class="px-6 py-4 text-right text-sm font-medium">
+                        <button data-student-id="${student.id}" class="view-student-btn text-purple-600 hover:text-purple-900">View Details</button>
+                    </td>
+                `;
+            });
+
+            studentsTableBody.querySelectorAll('.view-student-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const studentId = e.target.dataset.studentId;
+                    const student = dummyStudents.find(s => s.id === studentId);
+                    if (student) {
+                        showStudentDetailsModal(student);
+                    }
+                });
+            });
+        }
+
+        // Function to render applications list as cards
+        function renderApplicationsList(applications) {
+            if (!applicationsList) return;
+            applicationsList.innerHTML = '';
+            if (applications.length === 0) {
+                applicationsList.innerHTML = `<div class="px-6 py-4 text-center text-gray-500">No new applications.</div>`;
+                return;
+            }
+
+            applications.sort((a, b) => {
+                const statusOrder = { "Pending": 1, "Processing": 2, "Completed": 3 };
+                if (statusOrder[a.status] !== statusOrder[b.status]) {
+                    return statusOrder[a.status] - statusOrder[b.status];
+                }
+                return new Date(a.applicationDate) - new Date(b.applicationDate);
+            });
+
+            applications.forEach(app => {
+                const formattedDate = new Date(app.applicationDate).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+
+                const applicantDetails = dummyStudents.find(student => student.id === app.studentId);
+
+                let actionButtonsOverlayHtml = '';
+                let actionButtonInDetails = '';
+                let statusColorClass = '';
+                let processedByText = app.processedByName || 'N/A';
+
+                if (app.status === 'Pending') {
+                    actionButtonsOverlayHtml = `
+                        <button data-app-id="${app.id}" class="take-application-btn-hover hover-btn take" title="Take Application">
+                            <i class="fas fa-briefcase"></i> Take
+                        </button>
+                    `;
+                    actionButtonInDetails = `
+                        <button data-app-id="${app.id}" class="take-application-btn btn-primary text-sm py-2 px-4 mt-4">Take Application</button>
+                    `;
+                    statusColorClass = 'status-pending';
+                } else if (app.status === 'Processing') {
+                    actionButtonsOverlayHtml = `
+                        <button data-app-id="${app.id}" class="complete-application-btn-hover hover-btn complete" title="Mark Complete">
+                            <i class="fas fa-check-circle"></i> Complete
+                        </button>
+                    `;
+                    actionButtonInDetails = `
+                        <button data-app-id="${app.id}" class="complete-application-btn bg-green-500 hover:bg-green-700 text-white text-sm py-2 px-4 rounded-md mt-4">Mark Complete</button>
+                    `;
+                    statusColorClass = 'status-processing';
+                } else if (app.status === 'Completed') {
+                    statusColorClass = 'status-completed';
+                    actionButtonsOverlayHtml = `<span class="text-gray-500 text-xs">Completed</span>`;
+                    actionButtonInDetails = `<span class="text-gray-500 text-sm mt-4 block">Application Completed</span>`;
+                }
+
+                const appCard = document.createElement('div');
+                appCard.className = 'application-card content-card p-4 rounded-lg shadow-sm';
+                appCard.innerHTML = `
+                    <div class="application-header flex justify-between items-center cursor-pointer relative group">
+                        <div class="flex-1 flex items-center space-x-4">
+                            <div class="font-medium text-gray-900">
+                                ${app.studentName} <span class="text-gray-500 text-sm">(ID: ${app.studentId})</span>
+                            </div>
+                            <div class="status-badge ${statusColorClass}">${app.status}</div>
+                        </div>
+                        <div class="hover-actions">
+                            ${actionButtonsOverlayHtml}
+                        </div>
+                        <button class="toggle-details-btn text-gray-500 hover:text-purple-700 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
+                            <i class="fas fa-chevron-down toggle-chevron"></i>
+                        </button>
                     </div>
-                    <div class="flex flex-col">
-                        <label for="edit-student-name" class="text-gray-500 text-xs mb-1">Student Name</label>
-                        <input type="text" id="edit-student-name" data-field="student_name" value="${student.student_name}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="edit-father-name" class="text-gray-500 text-xs mb-1">Father's Name</label>
-                        <input type="text" id="edit-father-name" data-field="father_name" value="${student.father_name}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="edit-department" class="text-gray-500 text-xs mb-1">Department</label>
-                        <input type="text" id="edit-department" data-field="department" value="${student.department}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="edit-program" class="text-gray-500 text-xs mb-1">Program</label>
-                        <input type="text" id="edit-program" data-field="program" value="${student.program}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="edit-cnic-number" class="text-gray-500 text-xs mb-1">CNIC Number</label>
-                        <input type="text" id="edit-cnic-number" data-field="cnic_number" value="${student.cnic_number}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="edit-mobile-number" class="text-gray-500 text-xs mb-1">Mobile Number</label>
-                        <input type="text" id="edit-mobile-number" data-field="mobile_no" value="${student.mobile_no}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label for="edit-institute" class="text-gray-500 text-xs mb-1">Institute</label>
-                        <input type="text" id="edit-institute" data-field="institute" value="${student.institute}" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <div class="application-details">
+                        <div class="applicant-details-section">
+                            <h4 class="font-semibold text-gray-800 mb-2">Applicant Details</h4>
+                            ${applicantDetails ? `
+                                <div class="detail-grid">
+                                    <div class="detail-item"><div class="detail-label">Roll Number</div><div class="detail-value">${applicantDetails.roll_no}</div></div>
+                                    <div class="detail-item"><div class="detail-label">Student Name</div><div class="detail-value">${applicantDetails.student_name}</div></div>
+                                    <div class="detail-item"><div class="detail-label">Father's Name</div><div class="detail-value">${applicantDetails.father_name}</div></div>
+                                    <div class="detail-item"><div class="detail-label">Department</div><div class="detail-value">${applicantDetails.department}</div></div>
+                                    <div class="detail-item"><div class="detail-label">Program</div><div class="detail-value">${applicantDetails.program}</div></div>
+                                    <div class="detail-item"><div class="detail-label">CNIC Number</div><div class="detail-value">${applicantDetails.cnic_number}</div></div>
+                                    <div class="detail-item"><div class="detail-label">Mobile Number</div><div class="detail-value">${applicantDetails.mobile_no}</div></div>
+                                    <div class="detail-item"><div class="detail-label">Institute</div><div class="detail-value">${applicantDetails.institute}</div></div>
+                                </div>
+                            ` : `<p class="text-gray-500">Applicant details not found.</p>`}
+                        </div>
+
+                        <div class="application-action-section section-separator">
+                            <h4 class="font-semibold text-gray-800 mb-2">Application Status & Actions</h4>
+                            <p class="text-sm text-gray-600 mb-1"><span class="font-medium">Application ID:</span> ${app.id}</p>
+                            <p class="text-sm text-gray-600 mb-1"><span class="font-medium">Application Date:</span> ${formattedDate}</p>
+                            <p class="text-sm text-gray-600 mb-4"><span class="font-medium">Processed By:</span> ${processedByText}</p>
+                            ${actionButtonInDetails}
+                        </div>
                     </div>
                 `;
-            }
-            if (studentDetailsModal) studentDetailsModal.classList.remove('hidden');
-        }
+                applicationsList.appendChild(appCard);
 
-        // Function to hide student details modal
-        function hideStudentDetailsModal() {
-            const studentDetailsModal = document.getElementById('studentDetailsModal');
-            if (studentDetailsModal) studentDetailsModal.classList.add('hidden');
-        }
-
-        // DOMContentLoaded event listener
-        document.addEventListener('DOMContentLoaded', async function () {
-            // Get DOM elements for navigation and views
-            const navDashboard = document.getElementById('nav-dashboard');
-            const navAllStudents = document.getElementById('nav-all-students');
-            const navApplications = document.getElementById('nav-applications');
-            const navAccess = document.getElementById('nav-access');
-
-            const dashboardView = document.getElementById('dashboard-view');
-            const allStudentsView = document.getElementById('all-students-view');
-            const applicationsView = document.getElementById('applications-view');
-            const accessView = document.getElementById('access-view');
-
-            const studentsTableBody = document.getElementById('students-table-body');
-            const applicationsList = document.getElementById('applications-list');
-            const addStaffForm = document.getElementById('add-staff-form');
-            const clearStaffFormButton = document.getElementById('clear-staff-form');
-
-            // Modal elements
-            const closeModalButton = document.getElementById('closeModalButton');
-            const modalOkButton = document.getElementById('modalOkButton');
-            if(closeModalButton) closeModalButton.addEventListener('click', hideModal);
-            if(modalOkButton) modalOkButton.addEventListener('click', hideModal);
-
-            const closeStudentDetailsModalButton = document.getElementById('closeStudentDetailsModalButton');
-            const cancelStudentChangesButton = document.getElementById('cancelStudentChangesButton');
-            const saveStudentChangesButton = document.getElementById('saveStudentChangesButton');
-
-            if(closeStudentDetailsModalButton) closeStudentDetailsModalButton.addEventListener('click', hideStudentDetailsModal);
-            if(cancelStudentChangesButton) cancelStudentChangesButton.addEventListener('click', hideStudentDetailsModal);
-            if(saveStudentChangesButton) {
-                saveStudentChangesButton.addEventListener('click', async () => {
-                    // In a real app, you would send updatedData to your backend/Firebase
-                    showModal('Success', 'Student details saved (simulated). Changes will not persist without a backend.');
-                    hideStudentDetailsModal();
-                });
-            }
-
-            // Handle Add Staff Form submission
-            if(addStaffForm) {
-                addStaffForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const staffId = document.getElementById('staff-id').value;
-                    const staffName = document.getElementById('staff-name').value;
-                    const staffEmail = document.getElementById('staff-email').value;
-                    const staffRole = document.getElementById('staff-role').value;
-                    const staffPassword = document.getElementById('staff-password').value;
-
-                    // Simulate adding staff
-                    showModal('Staff Added', `New staff member ${staffName} (${staffId}) with role ${staffRole} added (simulated).`);
-                    addStaffForm.reset(); // Clear the form
-                });
-            }
-
-            // Handle Clear Staff Form button
-            if(clearStaffFormButton) {
-                clearStaffFormButton.addEventListener('click', () => {
-                    addStaffForm.reset();
-                });
-            }
-
-            // Set current date
-            const currentDateElement = document.getElementById('current-date');
-            if (currentDateElement) {
-                const today = new Date();
-                const options = { year: 'numeric', month: 'long', day: 'numeric' };
-                currentDateElement.textContent = today.toLocaleDateString('en-US', options);
-            }
-            
-            // Function to set active navigation item and show/hide views
-            function setActiveNav(activeNav) {
-                [navDashboard, navAllStudents, navApplications, navAccess].forEach(nav => {
-                    if (nav) nav.classList.remove('active');
-                });
-                if (activeNav) activeNav.classList.add('active');
-
-                [dashboardView, allStudentsView, applicationsView, accessView].forEach(view => {
-                    if (view) view.classList.add('hidden');
-                });
-
-                if (activeNav === navDashboard && dashboardView) dashboardView.classList.remove('hidden');
-                else if (activeNav === navAllStudents && allStudentsView) allStudentsView.classList.remove('hidden');
-                else if (activeNav === navApplications && applicationsView) applicationsView.classList.remove('hidden');
-                else if (activeNav === navAccess && accessView) accessView.classList.remove('hidden');
-            }
-
-            // Navigation event listeners
-            if(navDashboard) {
-                navDashboard.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    setActiveNav(navDashboard);
-                });
-            }
-
-            if(navAllStudents) {
-                navAllStudents.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    setActiveNav(navAllStudents);
-                    renderStudentsTable(dummyStudents); // Render students when tab is active
-                });
-            }
-
-            if(navApplications) {
-                navApplications.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    setActiveNav(navApplications);
-                    renderApplicationsList(dummyApplications); // Render applications when tab is active
-                });
-            }
-
-            // New navigation event listener for Access tab
-            if(navAccess) {
-                navAccess.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    setActiveNav(navAccess);
-                });
-            }
-
-            // Initialize: Show dashboard by default and set active tab
-            setActiveNav(navDashboard);
-            // Initial render for dashboard summary
-            updateApplicationSummary(dummyApplications);
-
-
-            // Function to render students table
-            function renderStudentsTable(students) {
-                if (!studentsTableBody) return;
-                studentsTableBody.innerHTML = ''; // Clear existing rows
-                if (students.length === 0) {
-                    studentsTableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No student records found.</td></tr>`;
-                    return;
-                }
-                students.forEach(student => {
-                    const row = studentsTableBody.insertRow();
-                    row.className = 'whitespace-nowrap';
-                    row.innerHTML = `
-                        <td class="px-6 py-4">${student.roll_no}</td>
-                        <td class="px-6 py-4 font-medium">${student.student_name}</td>
-                        <td class="px-6 py-4">${student.program}</td>
-                        <td class="px-6 py-4">${student.department}</td>
-                        <td class="px-6 py-4 text-right text-sm font-medium">
-                            <button data-student-id="${student.id}" class="view-student-btn text-purple-600 hover:text-purple-900">View Details</button>
-                        </td>
-                    `;
-                });
-
-                // Add event listeners for "View Details" buttons
-                studentsTableBody.querySelectorAll('.view-student-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const studentId = e.target.dataset.studentId;
-                        const student = dummyStudents.find(s => s.id === studentId); // Use dummy data
-                        if (student) {
-                            showStudentDetailsModal(student);
-                        }
-                    });
-                });
-            }
-
-            // Function to render applications list as cards
-            function renderApplicationsList(applications) {
-                if (!applicationsList) return;
-                applicationsList.innerHTML = ''; // Clear existing content
-                if (applications.length === 0) {
-                    applicationsList.innerHTML = `<div class="px-6 py-4 text-center text-gray-500">No new applications.</div>`;
-                    return;
-                }
-
-                // Sort applications by status (Pending first), then by date (oldest first)
-                applications.sort((a, b) => {
-                    const statusOrder = { "Pending": 1, "Processing": 2, "Completed": 3 };
-                    if (statusOrder[a.status] !== statusOrder[b.status]) {
-                        return statusOrder[a.status] - statusOrder[b.status];
-                    }
-                    return new Date(a.applicationDate) - new Date(b.applicationDate);
-                });
-
-                applications.forEach(app => {
-                    const formattedDate = new Date(app.applicationDate).toLocaleDateString('en-US', {
-                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                    });
-
-                    // Find the corresponding student details from dummyStudents
-                    const applicantDetails = dummyStudents.find(student => student.id === app.studentId);
-
-                    let actionButtonsOverlayHtml = ''; // Changed name for clarity
-                    let actionButtonInDetails = '';
-                    let statusColorClass = '';
-                    let processedByText = app.processedByName || 'N/A';
-
-                    if (app.status === 'Pending') {
-                        // Hover action buttons
-                        actionButtonsOverlayHtml = `
-                            <button data-app-id="${app.id}" class="take-application-btn-hover hover-btn take" title="Take Application">
-                                <i class="fas fa-briefcase"></i> Take
-                            </button>
-                        `;
-                        // Button inside unfolded details
-                        actionButtonInDetails = `
-                            <button data-app-id="${app.id}" class="take-application-btn btn-primary text-sm py-2 px-4 mt-4">Take Application</button>
-                        `;
-                        statusColorClass = 'status-pending';
-                    } else if (app.status === 'Processing') {
-                        // Hover action buttons
-                        actionButtonsOverlayHtml = `
-                            <button data-app-id="${app.id}" class="complete-application-btn-hover hover-btn complete" title="Mark Complete">
-                                <i class="fas fa-check-circle"></i> Complete
-                            </button>
-                        `;
-                        // Button inside unfolded details
-                        actionButtonInDetails = `
-                            <button data-app-id="${app.id}" class="complete-application-btn bg-green-500 hover:bg-green-700 text-white text-sm py-2 px-4 rounded-md mt-4">Mark Complete</button>
-                        `;
-                        statusColorClass = 'status-processing';
-                    } else if (app.status === 'Completed') {
-                        statusColorClass = 'status-completed';
-                        actionButtonsOverlayHtml = `<span class="text-gray-500 text-xs">Completed</span>`;
-                        actionButtonInDetails = `<span class="text-gray-500 text-sm mt-4 block">Application Completed</span>`;
+                const header = appCard.querySelector('.application-header');
+                header.addEventListener('click', (e) => {
+                    if (e.target.closest('.hover-btn') || e.target.closest('.toggle-details-btn') || e.target.closest('.take-application-btn') || e.target.closest('.complete-application-btn')) {
+                        return;
                     }
 
-                    const appCard = document.createElement('div');
-                    appCard.className = 'application-card content-card p-4 rounded-lg shadow-sm';
-                    appCard.innerHTML = `
-                        <div class="application-header flex justify-between items-center cursor-pointer relative group">
-                            <div class="flex-1 flex items-center space-x-4">
-                                <div class="font-medium text-gray-900">
-                                    ${app.studentName} <span class="text-gray-500 text-sm">(ID: ${app.studentId})</span>
-                                </div>
-                                <div class="status-badge ${statusColorClass}">${app.status}</div>
-                            </div>
-                            <div class="hover-actions">
-                                ${actionButtonsOverlayHtml}
-                            </div>
-                            <button class="toggle-details-btn text-gray-500 hover:text-purple-700 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
-                                <i class="fas fa-chevron-down toggle-chevron"></i>
-                            </button>
-                        </div>
-                        <div class="application-details">
-                            <div class="applicant-details-section">
-                                <h4 class="font-semibold text-gray-800 mb-2">Applicant Details</h4>
-                                ${applicantDetails ? `
-                                    <div class="detail-grid">
-                                        <div class="detail-item"><div class="detail-label">Roll Number</div><div class="detail-value">${applicantDetails.roll_no}</div></div>
-                                        <div class="detail-item"><div class="detail-label">Student Name</div><div class="detail-value">${applicantDetails.student_name}</div></div>
-                                        <div class="detail-item"><div class="detail-label">Father's Name</div><div class="detail-value">${applicantDetails.father_name}</div></div>
-                                        <div class="detail-item"><div class="detail-label">Department</div><div class="detail-value">${applicantDetails.department}</div></div>
-                                        <div class="detail-item"><div class="detail-label">Program</div><div class="detail-value">${applicantDetails.program}</div></div>
-                                        <div class="detail-item"><div class="detail-label">CNIC Number</div><div class="detail-value">${applicantDetails.cnic_number}</div></div>
-                                        <div class="detail-item"><div class="detail-label">Mobile Number</div><div class="detail-value">${applicantDetails.mobile_no}</div></div>
-                                        <div class="detail-item"><div class="detail-label">Institute</div><div class="detail-value">${applicantDetails.institute}</div></div>
-                                    </div>
-                                ` : `<p class="text-gray-500">Applicant details not found.</p>`}
-                            </div>
+                    const detailsDiv = appCard.querySelector('.application-details');
+                    const icon = appCard.querySelector('.toggle-chevron');
 
-                            <div class="application-action-section section-separator">
-                                <h4 class="font-semibold text-gray-800 mb-2">Application Status & Actions</h4>
-                                <p class="text-sm text-gray-600 mb-1"><span class="font-medium">Application ID:</span> ${app.id}</p>
-                                <p class="text-sm text-gray-600 mb-1"><span class="font-medium">Application Date:</span> ${formattedDate}</p>
-                                <p class="text-sm text-gray-600 mb-4"><span class="font-medium">Processed By:</span> ${processedByText}</p>
-                                ${actionButtonInDetails}
-                            </div>
-                        </div>
-                    `;
-                    applicationsList.appendChild(appCard);
-
-                    // Add event listener to the application-header for toggling details
-                    const header = appCard.querySelector('.application-header');
-                    header.addEventListener('click', (e) => {
-                        // Prevent toggling if the click target is an action button or the chevron button itself
-                        if (e.target.closest('.hover-btn') || e.target.closest('.toggle-details-btn') || e.target.closest('.take-application-btn') || e.target.closest('.complete-application-btn')) {
-                            return;
-                        }
-
-                        const detailsDiv = appCard.querySelector('.application-details');
-                        const icon = appCard.querySelector('.toggle-chevron'); // Get the chevron icon
-
-                        if (detailsDiv.classList.contains('expanded')) {
-                            detailsDiv.classList.remove('expanded');
-                            icon.classList.remove('rotated');
-                        } else {
-                            detailsDiv.classList.add('expanded');
-                            icon.classList.add('rotated');
-                        }
-                    });
+                    if (detailsDiv.classList.contains('expanded')) {
+                        detailsDiv.classList.remove('expanded');
+                        icon.classList.remove('rotated');
+                    } else {
+                        detailsDiv.classList.add('expanded');
+                        icon.classList.add('rotated');
+                    }
                 });
+            });
 
-                // Add event listeners for "Toggle Details" buttons (chevron)
-                applicationsList.querySelectorAll('.toggle-details-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        e.stopPropagation(); // Stop propagation to prevent header's click listener from firing
-                        const detailsDiv = e.currentTarget.closest('.application-card').querySelector('.application-details');
-                        const icon = e.currentTarget.querySelector('.toggle-chevron');
-                        if (detailsDiv.classList.contains('expanded')) {
-                            detailsDiv.classList.remove('expanded');
-                            icon.classList.remove('rotated');
-                        } else {
-                            detailsDiv.classList.add('expanded');
-                            icon.classList.add('rotated');
-                        }
-                    });
+            applicationsList.querySelectorAll('.toggle-details-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const detailsDiv = e.currentTarget.closest('.application-card').querySelector('.application-details');
+                    const icon = e.currentTarget.querySelector('.toggle-chevron');
+                    if (detailsDiv.classList.contains('expanded')) {
+                        detailsDiv.classList.remove('expanded');
+                        icon.classList.remove('rotated');
+                    } else {
+                        detailsDiv.classList.add('expanded');
+                        icon.classList.add('rotated');
+                    }
                 });
+            });
 
-                // Event listeners for hover action buttons
-                applicationsList.querySelectorAll('.take-application-btn-hover, .complete-application-btn-hover').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        e.stopPropagation(); // Prevent click from triggering fold/unfold
-                        showModal('Action Simulated', `Application ${e.currentTarget.dataset.appId} action triggered (simulated).`);
-                    });
+            applicationsList.querySelectorAll('.take-application-btn-hover, .complete-application-btn-hover').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    showModal('Action Simulated', `Application ${e.currentTarget.dataset.appId} action triggered (simulated).`);
                 });
+            });
 
-                // Event listeners for full buttons inside details (take-application-btn)
-                applicationsList.querySelectorAll('.take-application-btn, .complete-application-btn').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        e.stopPropagation(); // Prevent click from triggering fold/unfold
-                        showModal('Action Simulated', `Application ${e.currentTarget.dataset.appId} action triggered (simulated).`);
-                    });
+            applicationsList.querySelectorAll('.take-application-btn, .complete-application-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    showModal('Action Simulated', `Application ${e.currentTarget.dataset.appId} action triggered (simulated).`);
                 });
-            }
+            });
+        }
 
-            // Function to update application summary on dashboard
-            function updateApplicationSummary(applications) {
-                let total = applications.length;
-                let pending = applications.filter(app => app.status === 'Pending').length;
-                let processing = applications.filter(app => app.status === 'Processing').length;
-                let completed = applications.filter(app => app.status === 'Completed').length;
-
-                document.getElementById('total-applications').textContent = total;
-                document.getElementById('pending-applications').textContent = pending;
-                document.getElementById('processing-applications').textContent = processing;
-                document.getElementById('completed-applications').textContent = completed;
-            }
-        });
-    </script>
+        // Make renderStudentsTable and renderApplicationsList available globally for socket updates
+        window.renderStudentsTable = renderStudentsTable;
+        window.renderApplicationsList = renderApplicationsList;
+    });
+</script>
 </body>
 </html>
