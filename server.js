@@ -245,6 +245,16 @@ app.post('/signup', async (req, res) => {
     roll_no, student_name, father_name, department, program,
     cnic_number, mobile_no, institute, password, confirmPassword
   } = req.body;
+
+  // Roll Number Format Validation (F00-0000 or S00-0000)
+  const rollNoRegex = /^[FS]\d{2}-\d{4}$/;
+  if (!roll_no || !rollNoRegex.test(roll_no)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid Roll Number. Format must be F00-0000 or S00-0000 (e.g., F23-0519 or S23-0519)."
+    });
+  }
+
   if (password !== confirmPassword) {
     return res.status(400).json({ success: false, message: "Passwords do not match" });
   }
@@ -255,6 +265,12 @@ app.post('/signup', async (req, res) => {
     const existingUser = await usersCollection.findOne({ cnic_number });
     if (existingUser) {
       return res.status(400).json({ success: false, message: "CNIC is already registered." });
+    }
+
+    // Check if Roll Number is already registered
+    const existingRoll = await usersCollection.findOne({ roll_no });
+    if (existingRoll) {
+      return res.status(400).json({ success: false, message: "Roll Number is already registered." });
     }
     
     const student = {
